@@ -1,88 +1,107 @@
-# air-quality-prediction-advanced
-A project to implement a comprehensive MLOps pipeline
+# Air Quality Prediction with Ensemble Modeling
 
-# Air Quality Prediction Using Ensemble Modeling
-Overview
-This project predicts air quality measurements using an ensemble of multiple models:
+## Overview
 
-Linear Regression
+This project predicts air quality using an ensemble approach that combines the strengths of multiple machine learning models. Our chosen strategy is **Option B: Ensemble Modeling**. By integrating several models, we improve prediction robustness and accuracy, capturing a wide range of patterns in the data.
 
-Random Forest (with hyperparameter tuning)
+---
 
-XGBoost
+## Ensemble Modeling Strategy
 
-LSTM Neural Network
+### Individual Models
 
-The ensemble aggregates the predictions using a weighted average strategy based on each model’s performance.
+We train and optimize the following models:
 
-Repository Structure
-air_quality_prediction.py: Main code for the integrated air quality prediction pipeline.
+- **Linear Regression:**  
+  Provides a simple baseline using a linear relationship between predictors and the target variable. Its straightforward nature helps in understanding fundamental trends.
 
-mlflow.db: SQLite database used for MLflow tracking (automatically generated).
+- **Random Forest (with Hyperparameter Tuning):**  
+  An ensemble of decision trees, Random Forest captures complex non-linear relationships and interactions. We apply hyperparameter tuning using RandomizedSearchCV to refine its performance by finding the best combination of parameters (such as the number of trees, max depth, etc.).
 
-saved_models/: Folder containing serialized models and scalers.
+- **XGBoost:**  
+  A gradient boosting algorithm that efficiently captures complex interactions in tabular data. XGBoost often yields high performance due to its boosting framework.
 
-README.md: This file.
+- **LSTM Model:**  
+  A deep learning model tailored for time-series data. LSTMs capture temporal dependencies, enabling the model to learn from historical data points for future prediction.
 
-Prerequisites
-Python 3.8 or above
+### Weighted Average Ensemble
 
-Required packages (see requirements.txt):
+Instead of selecting a single model, our ensemble aggregates the predictions of all four models using a weighted average. The weight for each model is based on its Mean Absolute Error (MAE) on validation data. The calculation follows this process:
 
-pandas
+1. **Calculate Inverse Error:**  
+   For each model, compute the reciprocal of its MAE.
 
-numpy
+2. **Normalize Weights:**  
+   Sum the inverse errors and divide each model’s inverse error by this total so that the weights add up to 1.
 
-scikit-learn
+3. **Aggregate Predictions:**  
+   Final prediction is given by:
 
-xgboost
+  **Ensemble Prediction** = Σ (Weightᵢ × Predictionᵢ)
 
-tensorflow
+where  
+  **Weightᵢ = (1 / MAEᵢ) / ∑ (1 / MAEⱼ)**
 
-mlflow
+#### Example:
+If the MAEs for three models are:  
+- Linear Regression: MAE = 2.0  
+- Random Forest: MAE = 1.0  
+- XGBoost: MAE = 1.5  
 
-Other standard libraries (matplotlib, pickle, etc.)
+Then their inverse errors are:  
+- LR: 1/2.0 = 0.5  
+- RF: 1/1.0 = 1.0  
+- XGBoost: 1/1.5 ≈ 0.67  
 
-You can install the required packages with:
+Total = 0.5 + 1.0 + 0.67 = 2.17
 
-bash
-Copy
-pip install -r requirements.txt
-Setting Up MLflow
-For Local Tracking:
-Ensure your MLflow tracking URI is set to use the local SQLite database:
+Normalized weights:  
+- LR: 0.5 / 2.17 ≈ 0.23  
+- RF: 1.0 / 2.17 ≈ 0.46  
+- XGBoost: 0.67 / 2.17 ≈ 0.31  
 
-python
-Copy
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
-Start the MLflow UI with:
+The ensemble prediction for a new input is then computed as:  
+  0.23 × (LR prediction) + 0.46 × (RF prediction) + 0.31 × (XGBoost prediction)
 
-bash
-Copy
-mlflow ui --backend-store-uri sqlite:///mlflow.db
-Open your browser and navigate to http://127.0.0.1:5000 to view your experiments.
+This approach allows the ensemble to emphasize models with superior performance (lower MAE).
 
-Running the Pipeline
-Place the input file (air_quality_streamed.csv) in the root directory or update the file path in the script.
+---
 
-Run the integrated script:
+## Model Experimentation and MLflow Experiments
 
-bash
-Copy
-python air_quality_prediction.py
-The script performs feature engineering, trains individual models, tunes hyperparameters for the Random Forest model, and finally creates an ensemble model.
+### Experimentation Process
+- **Individual Training:**  
+  Each model (Linear Regression, Random Forest, XGBoost, LSTM) is trained on the engineered air quality dataset.
+  
+- **Hyperparameter Tuning:**  
+  The Random Forest model undergoes hyperparameter tuning via RandomizedSearchCV using a reduced parameter grid to optimize its performance.
+  
+- **MLflow Tracking:**  
+  We use MLflow to log parameters, metrics, and artifacts for each model.  
+  - **Parent Run:** Contains overall experiment parameters (target column, dataset size, etc.).
+  - **Nested Runs:** Capture individual model experiments (including tuning for Random Forest, as well as runs for Linear Regression, XGBoost, and LSTM).
+  - **Metrics Logged:** For each model, we log MAE and RMSE. The ensemble’s performance is also logged.
+  
+- **Ensemble Creation:**  
+  Model predictions are aggregated using the weighted average approach described above. The final ensemble metrics are compared to those of the individual models to evaluate the benefit of the ensemble.
 
-After execution, check the MLflow UI for detailed experiment logs.
+## Setup Instructions
 
-Experimentation and Results
-Model Experimentation:
-Our experiments compared several model types with different hyperparameters (e.g., tuned Random Forest parameters).
+### Clone the Repository:
+Clone the repo by using git clone https://github.com/dharmeshagase/air-quality-prediction-advanced
 
-MLflow Tracking:
-Each model’s performance (MAE, RMSE) is logged, and detailed nested runs provide insight into how hyperparameter tuning affected outcomes.
+### Create and Activate Virtual Environment:
+python -m venv venv
+Activate on Linux/Mac:
+source venv/bin/activate
 
-Ensemble Strategy:
-The ensemble uses a weighted average of all model predictions. The final ensemble metrics are compared against individual model metrics to validate improvements.
+Activate on Windows:
+venv\Scripts\activate
 
-Feature Engineering:
-The code demonstrates extensive feature engineering including time-based features, lag features, rolling window statistics, interaction features, and collinearity reduction
+### Viewing Results in MLflow
+- Start MLflow UI using:
+  mlflow ui --backend-store-uri sqlite:///mlflow.db
+  Open http://127.0.0.1:5000 in your browser
+- Run the python code
+  python air_quality_prediction.py
+  This runs the full workflow: feature engineering, individual model training (with hyperparameter tuning for Random Forest), ensemble formation, and MLflow logging of all experiments
