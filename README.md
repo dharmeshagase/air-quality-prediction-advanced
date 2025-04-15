@@ -92,6 +92,7 @@ Clone the repo by using git clone https://github.com/dharmeshagase/air-quality-p
 
 ### Create and Activate Virtual Environment:
 python -m venv venv
+
 Activate on Linux/Mac:
 source venv/bin/activate
 
@@ -102,6 +103,9 @@ venv\Scripts\activate
 - Start MLflow UI using:
   mlflow ui --backend-store-uri sqlite:///mlflow.db
   Open http://127.0.0.1:5000 in your browser
+  
 - Run the python code
-  python air_quality_prediction.py
+- 
+  python airquality_prediction_mlflow.py
+  
   This runs the full workflow: feature engineering, individual model training (with hyperparameter tuning for Random Forest), ensemble formation, and MLflow logging of all experiments
